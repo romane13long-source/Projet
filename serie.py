@@ -7,10 +7,8 @@ import pandas as pd
 # CONFIGURATION
 # ============================================
 TOTAL_SERIES = 15000    # nombre total souhaité
-BATCH_SIZE = 40           # séries par requête
-DELAY = 1.5               # secondes entre requêtes
-
-# Liste des pays à scraper
+BATCH_SIZE = 40         # séries par requête
+DELAY = 1.5             # secondes entre requêtes
 COUNTRIES = ['FR', 'US', 'GB', 'DE', 'IT', 'ES', 'KO', 'JA', 'TR', 'PT']
 
 # ============================================
@@ -34,7 +32,7 @@ all_data = []
 for country in COUNTRIES:
     num_pages = (TOTAL_SERIES // (BATCH_SIZE * len(COUNTRIES))) + 1
     print(f"\nRécupération des pages pour {country}...")
-    
+
     json_data = {
         'operationName': 'GetPopularTitles',
         'variables': {
@@ -45,18 +43,7 @@ for country in COUNTRIES:
             'creditsRole': 'DIRECTOR',
             'after': None,
             'popularTitlesFilter': {
-                'ageCertifications': [],
-                'excludeGenres': [],
-                'excludeProductionCountries': [],
                 'objectTypes': ['SHOW'],  # séries uniquement
-                'productionCountries': [],
-                'subgenres': [],
-                'genres': [],
-                'packages': [],
-                'excludeIrrelevantTitles': False,
-                'presentationTypes': [],
-                'monetizationTypes': [],
-                'searchQuery': '',
             },
             'watchNowFilter': {
                 'packages': [],
@@ -109,7 +96,6 @@ for country in COUNTRIES:
         try:
             response = requests.post('https://apis.justwatch.com/graphql', headers=headers, json=json_data)
             data = response.json()
-            # On ne stocke que si data et popularTitles existent
             if data and data.get('data') and data['data'].get('popularTitles'):
                 all_data.append(data)
         except Exception as e:
@@ -126,7 +112,6 @@ print("Extraction des infos...")
 liste_series = []
 
 for page_data in all_data:
-    # Sécurité : ne pas essayer de get si page_data est None
     if not page_data or not page_data.get('data') or not page_data['data'].get('popularTitles'):
         continue
 
@@ -145,13 +130,17 @@ for page_data in all_data:
         credits = content.get('credits', [])
         producteur = ', '.join([c.get('name') for c in credits]) if credits else 'N/A'
 
-        # Plateformes (plusieurs possibles)
+        # Plateformes uniques
         offers = node.get('offers', []) or []
         plateformes = list({
-            offer.get('package', {}).get('clearName', 'N/A')
+            offer.get('package', {}).get('clearName') 
             for offer in offers if offer.get('package', {}).get('clearName')
         })
-        plateformes_texte = ', '.join(plateformes) if plateformes else 'N/A'
+        plateformes.sort()  # tri pour ordre stable
+
+        plateforme1 = plateformes[0] if len(plateformes) > 0 else 'N/A'
+        plateforme2 = plateformes[1] if len(plateformes) > 1 else 'N/A'
+        plateforme3 = plateformes[2] if len(plateformes) > 2 else 'N/A'
 
         # Infos de la série
         infos_serie = {
@@ -162,7 +151,9 @@ for page_data in all_data:
             'type': node.get('objectType', 'N/A'),
             'genres': genres_texte,
             'producteur': producteur,
-            'plateformes': plateformes_texte,
+            'plateforme1': plateforme1,
+            'plateforme2': plateforme2,
+            'plateforme3': plateforme3
         }
 
         liste_series.append(infos_serie)
@@ -174,9 +165,11 @@ print(f"{len(liste_series)} séries extraites ✅\n")
 # ============================================
 print("Sauvegarde...")
 
+# JSON
 with open('series_propres.json', 'w', encoding='utf-8') as f:
     json.dump(liste_series, f, indent=2, ensure_ascii=False)
 
+# CSV
 df = pd.DataFrame(liste_series)
 df.to_csv('series_justwatch.csv', index=False, encoding='utf-8')
 
