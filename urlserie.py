@@ -1,40 +1,40 @@
 import requests
 import json
 import time
+from bs4 import BeautifulSoup
 
+# --- Configuration ---
 url = "https://apis.justwatch.com/graphql"
-
 headers = {
     'accept': '*/*',
     'content-type': 'application/json',
     'user-agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
 }
 
-countries = ['FR', 'US', 'IT', 'DE', 'ES', 'GB', 'CA']  # tu peux en ajouter d'autres
+countries = ['FR', 'US', 'IT', 'DE', 'ES', 'GB', 'CA']
 all_urls = []
 seen_ids = set()
 limit = 40
-total_needed = 5000  # nombre total de séries que tu veux
+total_needed = 10  # juste 10 séries pour tester
 
+# --- 1️⃣ Récupération des URLs ---
 for country in countries:
     if len(all_urls) >= total_needed:
         break
-    
+
     print(f"Pays: {country}")
-    
-    for offset in range(0, 2000, limit):  # tu peux augmenter 2000 si besoin
+
+    for offset in range(0, 2000, limit):
         if len(all_urls) >= total_needed:
             break
-        
+
         payload = {
             'operationName': 'GetPopularTitles',
             'variables': {
                 'first': limit,
                 'offset': offset,
                 'popularTitlesSortBy': 'POPULAR',
-                'popularTitlesFilter': {
-                    'objectTypes': ['SHOW']  # <-- séries uniquement
-                },
+                'popularTitlesFilter': {'objectTypes': ['SHOW']},
                 'language': 'fr',
                 'country': country
             },
@@ -51,13 +51,13 @@ for country in countries:
   }
 }'''
         }
-        
+
         response = requests.post(url, headers=headers, json=payload)
         data = response.json()
-        
+
         if 'data' in data and 'popularTitles' in data['data']:
             shows = data['data']['popularTitles']['edges']
-            
+
             for show in shows:
                 show_id = show['node']['id']
                 if show_id not in seen_ids:
@@ -65,15 +65,19 @@ for country in countries:
                     full_path = show['node']['content']['fullPath']
                     full_url = f"https://www.justwatch.com{full_path}"
                     all_urls.append(full_url)
-            
-            print(f"Recupere: {len(all_urls)} URLs uniques")
-            
+
+            print(f"Récupéré: {len(all_urls)} URLs uniques")
+
             if len(shows) < limit:
                 break
-        
-        time.sleep(1)
 
-with open('justwatchseries_urls.json', 'w', encoding='utf-8') as f:
-    json.dump(all_urls, f, indent=2, ensure_ascii=False)
+      
+for serie in all_urls:
+    response = requests.get(serie, headers=headers)
+    soup = BeautifulSoup(response.text, "html.parser")
 
-print(f"Termine: {len(all_urls)} URLs sauvegardees dans justwatchseries_urls.json")
+    plateformes = soup.find_all("img", {"data-testid": "provider-icon-override"})
+    for plateforme in plateformes:
+        nom_plateforme = plateforme.get("alt") or plateforme.get("title")
+        print(f"Série : {serie}")
+        print(f"Plateforme : {nom_plateforme}\n")
