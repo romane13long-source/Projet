@@ -14,10 +14,9 @@ headers = {
 countries = ['FR', 'US', 'IT', 'DE', 'ES', 'GB', 'CA']
 all_urls = []
 seen_ids = set()
-limit = 40
-total_needed = 10  # juste 10 séries pour tester
+limit = 10
+total_needed = 15
 
-# --- 1️⃣ Récupération des URLs ---
 for country in countries:
     if len(all_urls) >= total_needed:
         break
@@ -73,11 +72,24 @@ for country in countries:
 
       
 for serie in all_urls:
-    response = requests.get(serie, headers=headers)
-    soup = BeautifulSoup(response.text, "html.parser")
+    response = requests.get(serie)  
+    content_html = response.text
+    soup = BeautifulSoup(content_html, "html.parser")
+
+    title_tag = soup.find("h1", class_="title-detail-hero_details_title")
+    if title_tag:
+        nom_film = title_tag.get_text(strip=True)
+        print(f"Titre : {nom_film}")
+    else:
+        print("None")
 
     plateformes = soup.find_all("img", {"data-testid": "provider-icon-override"})
-    for plateforme in plateformes:
-        nom_plateforme = plateforme.get("alt") or plateforme.get("title")
+    if not plateformes:
+        print("None")
+    for p in plateformes:
+        nom_plateforme = p.get("alt") or p.get("title")
         print(f"Série : {serie}")
-        print(f"Plateforme : {nom_plateforme}\n")
+        print(f"Plateforme : {nom_plateforme}")
+        print("------------")
+ 
+    duree = 

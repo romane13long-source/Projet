@@ -18,5 +18,3 @@ for producer in full_url:
     content_html = response.text
     soup = BeautifulSoup(content_html, "html.parser")
     producer = soup.find_all("span", class_="title-credit-name")
-
-    
