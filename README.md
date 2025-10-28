@@ -40,3 +40,7 @@
 - En fin de scraping :
     - Sauvegarder la liste complète dans un fichier JSON
     - Sauvegarder la même liste dans un fichier CSV pour analyse
+
+Pour exécuter le code, il faut taper python3 Final_code.py dans le terminal.
+Celui-ci va scraper environ 6 500 films et séries, puis stocker les données dans un fichier JSON et un fichier CSV.
+Le programme met environ quelques secondes à récupérer les informations de chaque film ou série.
